@@ -1,21 +1,52 @@
 {
   "name": "cube",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "GUI to launch containers locally and on clusters",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps",
+    "release": "electron-builder"
   },
-  "author": "Tim Robert-Fitzgerald",
+  "build": {
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "pennsive",
+        "repo": "cube"
+      }
+    ],
+    "appId": "com.github.pennsive.cube",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "zip",
+        "dmg"
+      ]
+    }
+  },
+  "author": "Tim Robert-Fitzgerald <Timothy.Robert-Fitzgerald@Pennmedicine.upenn.edu>",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PennSIVE/cube/issues"
+  },
+  "homepage": "https://github.com/PennSIVE/cube#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PennSIVE/cube.git"
+  },
   "devDependencies": {
-    "electron": "^8.2.1"
+    "electron": "^8.2.1",
+    "electron-builder": "^22.4.1"
   },
   "dependencies": {
     "bootstrap": "^4.4.1",
     "chokidar": "^3.3.1",
     "electron-json-storage": "^4.1.8",
+    "electron-updater": "^4.2.5",
     "fix-path": "^3.0.0",
     "jquery": "^3.5.0",
     "rsync": "^0.6.1",

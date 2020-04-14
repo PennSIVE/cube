@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const {autoUpdater} = require("electron-updater");
 const storage = require('electron-json-storage');
 const exec = require('child_process').exec;
 const Rsync = require('rsync');
@@ -26,6 +27,7 @@ let state = {
 function init() {
     fixPath();
     createWindow();
+    autoUpdater.checkForUpdatesAndNotify();
 }
 
 function createWindow() {
