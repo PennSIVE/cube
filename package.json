@@ -9,7 +9,8 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "postinstall": "electron-builder install-app-deps",
-    "release": "electron-builder"
+    "release-mac": "electron-builder -m -p always",
+    "release": "electron-builder -wl -p always"
   },
   "build": {
     "publish": [
