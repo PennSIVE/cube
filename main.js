@@ -5,6 +5,7 @@ const exec = require('child_process').exec;
 const Rsync = require('rsync');
 const fixPath = require('fix-path');
 const chokidar = require('chokidar');
+const shortid = require('shortid');
 const watcher = chokidar.watch([], {
     ignored: /(^|[\/\\])\../, // ignore dotfiles
     persistent: true
@@ -103,20 +104,52 @@ function saveState() {
 function dockerPs() {
     const ps = exec("docker ps --format '{{json .}}'");
     ps.stdout.on('data', function (data) {
+        let arrayJobs = {};
         let containers = {};
         let response = data.split(/\r?\n/);
         // get current containers
         for (let i = 0; i < response.length; i++) {
             try {
                 const container = JSON.parse(response[i].trim());
-                containers[container.ID] = {
-                    id: container.ID,
-                    name: container.Names + ' (' + container.Image + ')',
-                    state: container.Status,
-                    age: new Date(container.CreatedAt)
-                };
+                if (container.Names.substring(0, 4) === 'job-') { // is array job
+                    let parts = container.Names.split('-')
+                    if (arrayJobs[parts[1]] === undefined) {
+                        arrayJobs[parts[1]] = [{
+                            id: parts[1],
+                            name: container.Names + ' (' + container.Image + ')',
+                            state: container.Status,
+                            age: new Date(container.CreatedAt)
+                        }];   
+                    } else {
+                        arrayJobs[parts[1]].push({
+                            id: parts[1],
+                            name: container.Names + ' (' + container.Image + ')',
+                            state: container.Status,
+                            age: new Date(container.CreatedAt)
+                        });
+                    }
+                } else {
+                    containers[container.ID] = {
+                        id: container.ID,
+                        name: container.Names + ' (' + container.Image + ')',
+                        state: container.Status,
+                        age: new Date(container.CreatedAt)
+                    };
+                }
             } catch (e) {
                 // console.log('todo', e);
+            }
+        }
+        // get array job containers
+        for (const key in arrayJobs) {
+            if (arrayJobs.hasOwnProperty(key)) {
+                const jobs = arrayJobs[key];
+                containers[jobs[0].id] = {
+                    id: jobs[0].id,
+                    name: `Array job ${jobs[0].id}`,
+                    state: `<p class="text-right mb-0"><span class="badge badge-primary">${jobs.length} tasks</span></p><p class="mt-0">Running...</p>`,
+                    age: jobs[0].age
+                }
             }
         }
         for (const key in containers) {
@@ -229,18 +262,25 @@ function singularityPs() {
     });
 }
 function dockerRun(opts) {
-    let command = 'docker run --rm ';
+    let command = 'docker run --rm -d';
     for (let i = 0; i < opts.bindMounts.length; i++) {
         const mount = opts.bindMounts[i];
         command += ' -v ' + mount.local + ':' + mount.container;
     }
     // handle special containers
     if (opts.image === 'rstudio') {
-        command += ' -d -p 80:8787 -e DISABLE_AUTH=true';
+        command += ' -p 80:8787 -e DISABLE_AUTH=true';
     }
-    command += (' ' + opts.org + '/' + opts.image + ':' + opts.tag + ' ' + opts.cmd)
-    const docker = exec(command);
-    docker.stdout.on('data', d => dockerPs());
+    if (opts.tasks !== null && opts.tasks !== undefined) {
+        let sid = shortid.generate();
+        for (let i = 1; i <= Number(opts.tasks); i++) {
+            exec(`${command} -e ${opts.indexVariable}=${i} --name job-${sid}-${i} ${opts.org}/${opts.image}:${opts.tag} ${opts.cmd}`);
+        }
+    } else {
+        command += ` ${opts.org}/${opts.image}:${opts.tag} ${opts.cmd}`
+        const docker = exec(command);
+        docker.stdout.on('data', d => dockerPs());
+    }
 }
 function singularityRun(opts) {
     let escapeShell = (cmd) => {
@@ -382,8 +422,8 @@ ipcMain.on('asynchronous-message', (event, json) => {
         }
     } else if (json.type === 'deleteContainer') {
         // it's going to be in one of these
-        delete state.docker.containers[json.id];
-        delete state.singularity.containers[json.id];
+        delete state.docker.containers[json.uuid];
+        delete state.singularity.containers[json.uuid];
         saveState();
     } else if (json.type === 'saveUsername') {
         state.user = json.username;
