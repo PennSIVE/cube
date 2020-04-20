@@ -36,13 +36,9 @@
             <div id="tags"></div>
             <div class="mb-2 mt-0 form-group" id="machine-option">
             </div>
-            <div id="ncpus" class="d-none" style="-webkit-app-region: no-drag;">
-              <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
-              <input type="range" class="custom-range" id="cpu-range" min="1" max="16" step="1" value="1">
+            <div id="cubic-options">
             </div>
-            <div id="nmem" class="d-none" style="-webkit-app-region: no-drag;">
-              <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
-              <input type="range" class="custom-range" id="mem-range" min="1" max="64" step="1" value="8">
+            <div id="array-job">
             </div>
             <div id="bind-mounts"></div>
             <button type="button" class="btn btn-outline-primary btn-sm float-right" onclick="addBindMount()" style="position: relative;bottom:20px">Add another mount</button>
@@ -156,7 +152,6 @@
   </footer>
 </body>
 <script>window.$ = window.jQuery = require('jquery');</script>
-<script src="../node_modules/bootstrap/dist/js/popper.min.js"></script>
 <script src="../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
 <script>
   const electron = require('electron');
@@ -169,7 +164,7 @@
   function addContainer(json) {
     let isDocker = isNaN(json.id); // hacky way to tell if it's a docker container or qsub job/singularity container
     let title = json.name;
-    let message = `<p id="p${json.id}">${json.state}</p>
+    let message = `<div id="p${json.id}">${json.state}</div>
         <div class="btn-group w-100 btn-group-sm" role="group" aria-label="Job controls">
           <button type="button" ${isDocker ? 'data-runtime="docker"' : 'data-runtime="singularity"'} data-id="${json.id}" data-target="#outputModal" data-toggle="modal" class="btn btn-outline-success">View output</button>
           <button type="button" class="btn btn-outline-danger" data-dismiss="toast" onclick="deleteContainer(event, '${json.id}')">Delete</button>
@@ -276,6 +271,8 @@
       cmd: formData.cmd,
       cpu: formData.cpu,
       mem: formData.mem,
+      indexVariable: formData.indexVariable,
+      tasks: formData.tasks,
       bindMounts: []
     };
     $('.container_path').each(function(i, e) {
@@ -397,11 +394,42 @@
     let modal = $(this);
     let fullName = button.data('org') + '/' + button.data('image');
     modal.find('.modal-title').text('Configure ' + fullName)
+    $('#array-job').html(`<div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="array-job-check" onchange="
+          $('#array-job-container').toggleClass('d-none');
+          if (!this.checked) {
+            formData.tasks = null;
+            formData.indexVariable = 'TASK_ID';
+          }
+        ">
+        <label class="custom-control-label" for="array-job-check">Array job</label>
+      </div>
+      <div class="row d-none" id="array-job-container">
+        <div class="col-6">
+          <div class="form-group">
+            <label for="array-job-env">Index variable</label>
+            <input type="text" class="form-control form-control-sm" id="array-job-env" value="TASK_ID" oninput="formData.indexVariable = this.value">
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="form-group">
+            <label for="array-job-count">Number of jobs</label>
+            <input type="number" class="form-control form-control-sm" id="array-job-count" oninput="formData.tasks = this.value">
+          </div>
+        </div>
+      </div>`);
     $('#bind-mounts').html('');
+    $('#cubic-options').html(`<div id="ncpus" class="d-none" style="-webkit-app-region: no-drag;">
+      <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
+      <input type="range" class="custom-range" id="cpu-range" min="1" max="16" step="1" value="1">
+    </div>
+    <div id="nmem" class="d-none" style="-webkit-app-region: no-drag;">
+      <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
+      <input type="range" class="custom-range" id="mem-range" min="1" max="64" step="1" value="8">
+    </div>`);
     addBindMount();
     // add tag option
-    $('#tags').html(`<select class="custom-select mb-2" name="tag-select" id="tag-select" required>
-      <option selected>Select version</option>
+    $('#tags').html(`<label for="tag-select">Select version</label><select class="custom-select mb-2" name="tag-select" id="tag-select" required>
       ${button.data('tags').split(',').map((item, i) => `
         <option value="${item}">${item}</option>
       `).join('')}
@@ -432,8 +460,8 @@
       $('#machine-option').html('<p>R Studio is only available for local creation</p><input type="hidden" name="machine-select" id="machine-select" value="local"/>')
     } else {
       $('#machine-option').html(
-      `<select class="custom-select" name="machine-select" id="machine-select" required>
-        <option selected>Select machine</option>
+      `<label for="machine-select">Select machine</label>
+      <select class="custom-select" name="machine-select" id="machine-select" required>
         <option value="local">My computer</option>
         <option value="cubic">CUBIC</option>
       </select>`);
@@ -457,6 +485,8 @@
       // cubic defaults
       cpu: 1,
       mem: 8,
+      indexVariable: 'TASK_ID',
+      tasks: null
     };
   });
   $('#outputModal').on('show.bs.modal', function (event) {
@@ -477,7 +507,7 @@
     } else if (json.type === 'addContainer') {
       addContainer(json);
     } else if (json.type === 'updateContainer') {
-      $('#p' + json.id).text(json.state);
+      $('#p' + json.id).html(json.state);
     } else if (json.type === 'containerFinished') {
       new Notification(`CUBIC job #${json.id} complete`);
     } else if (json.type === 'setUser') {

@@ -174,6 +174,20 @@ function singularityPs() {
                 } else if (prettyState === 'hqw') {
                     prettyState = 'Waiting for another job to finish'
                 }
+                let taskIdIndex = index + 4; // this will be either queue or slots column depending on if its running
+                if (isNaN(data[taskIdIndex])) { // if it contains non-numeric chars, its the queue column
+                    taskIdIndex += 2; // +2 brings us to ja-task-ID column
+                    // prettyState += `<p class="text-primary mt-0"><small>${data[taskIdIndex]} total tasks</small></p>`;
+                } else { // it is the slots column
+                    taskIdIndex += 1; // +1 brings us to the ja-task-ID column
+                }
+                if (data[taskIdIndex] === undefined // if we went too far past and hit end of array or
+                    || data[taskIdIndex + 3] === state.user) { // hit the user column again if we add +3
+                    prettyState = `<p>${prettyState}</p>`
+                } else {
+                    prettyState = `<p class="text-right mb-0"><span class="badge badge-primary">${data[taskIdIndex]} tasks</span></p><p class="mt-0">${prettyState}</p>`
+                }
+
                 containers[id] = {
                     id: id,
                     name: `CUBIC job #${id}`,
@@ -229,13 +243,21 @@ function dockerRun(opts) {
     docker.stdout.on('data', d => dockerPs());
 }
 function singularityRun(opts) {
+    let escapeShell = (cmd) => {
+        return cmd.replace(/(["'$`\\])/g,'\\$1');
+    };
     let command = 'singularity exec';
     for (let i = 0; i < opts.bindMounts.length; i++) {
         const mount = opts.bindMounts[i];
         command += ` -B ~/.cubedata${mount.local}:${mount.container}`;
     }
-    command += ` /cbica/home/robertft/singularity_images/${opts.image}_${opts.tag}.sif ${opts.cmd}`;
-    command = `#$ -o \\$HOME/.cubedata/.stdout.\\$JOB_ID\\n#$ -e \\$HOME/.cubedata/.stderr.\\$JOB_ID\\n#$ -l h_vmem=${opts.mem}G\\n#$ -pe threaded ${opts.cpu}\\n${command}\\n`;
+    command += ` /cbica/home/robertft/singularity_images/${opts.image}_${opts.tag}.sif ${escapeShell(opts.cmd)}`;
+    let sgeOpts = `#$ -o \\$HOME/.cubedata/.stdout.\\$JOB_ID\\n#$ -e \\$HOME/.cubedata/.stderr.\\$JOB_ID\\n#$ -l h_vmem=${opts.mem}G\\n#$ -pe threaded ${opts.cpu}\\n`;
+    if (opts.tasks !== null && opts.tasks !== undefined) {
+        sgeOpts += `#$ -t 1-${opts.tasks}\\nexport ${opts.indexVariable}=\\\$SGE_TASK_ID\\n`;
+    }
+    command = sgeOpts + command;
+
     const singularity = exec(`ssh -X -Y -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.user}@cubic-login "printf '${command}' > \\$TMPDIR/script.sh && qsub -terse \\$TMPDIR/script.sh"`);
     singularity.stdout.on('data', function (jobId) {
         // win.webContents.send('asynchronous-message', { type: 'jobId', id: jobId });
