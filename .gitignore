@@ -1,5 +1,6 @@
 node_modules/
 dist/
+*.p12
 yarn.lock
 .env
 .vscode
