@@ -1,6 +1,7 @@
 const exec = require('child_process').exec;
 const singularity = {
     previousExitCode: null,
+    rsyncInstance: null,
     run: function (opts, state, win) {
         let escapeShell = (cmd) => {
             return cmd.replace(/(["'$`\\])/g, '\\$1');
@@ -102,11 +103,11 @@ const singularity = {
         });
         ps.on('exit', (code) => {
             if (code === 255) {
-                win.webContents.send('asynchronous-message', { type: 'alert', message: `<strong>ssh ${state.data.user}@cbica-cluster</strong> failed; Unable to connect to CUBIC.` });
+                win.webContents.send('asynchronous-message', { type: 'alert', message: `<strong>ssh ${state.data.user}@cubic-login</strong> failed; Unable to connect to CUBIC.` });
             } else {
                 win.webContents.send('asynchronous-message', { type: 'clearAlert' });
                 if (module.exports.previousCode === 255) {
-                    require('./rsync.js').interval(state, win, false);
+                    module.exports.rsyncInstance.interval(state, win, false);
                 }
             }
             module.exports.previousExitCode = code;

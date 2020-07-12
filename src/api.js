@@ -1,6 +1,6 @@
 const exec = require('child_process').exec;
 const api = {
-    request: function(json, state, win, watcher, docker, singularity, rsync) {
+    request: function(json, state, win, docker, singularity, rsync) {
         if (json.type === 'run') {
             for (let i = 0; i < state.data.deployments.length; i++) {
                 const deployment = state.data.deployments[i];
@@ -31,7 +31,7 @@ const api = {
             state.data.deployments.push(json.deployment);
             for (let index = 0; index < json.deployment.bindMounts.length; index++) {
                 const mount = json.deployment.bindMounts[index];
-                watcher.add(mount.local);
+                rsync.watcher.add(mount.local);
                 rsync.transfer(state, win, mount.local);
             }
             state.save();
@@ -52,7 +52,7 @@ const api = {
                     module.exports.stdoutFrontend(win, data, json.id);
                 });
                 logs.stderr.on('data', function (data) {
-                    module.exports.module.exports.stderrFrontend(win, data, json.id);
+                    module.exports.stderrFrontend(win, data, json.id);
                 });
             } else if (json.runtime === 'singularity') {
                 const stdoutLogs = exec(`ssh -X -Y -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.data.user}@cubic-login "cat \\$HOME/.cubedata/.stdout.${json.id}"`);
@@ -61,11 +61,17 @@ const api = {
                 });
                 const stderrLogs = exec(`ssh -X -Y -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.data.user}@cubic-login "cat \\$HOME/.cubedata/.stderr.${json.id}"`);
                 stderrLogs.stdout.on('data', function (data) {
-                    module.exports.module.exports.stderrFrontend(win, data, json.id);
+                    module.exports.stderrFrontend(win, data, json.id);
                 });
             }
         } else if (json.type === 'singularityPs') {
             singularity.ps(state, win);
+        } else if (json.type === 'restoreBackup') {
+            // temporarily remove file from watched (so it isn't accidentally re uploaded), re-download, then watch re-downloaded file
+            rsync.watcher.unwatch(json.path);
+            let d = new Date(json.when);
+            rsync.downloadAndRestoreBackup(state, win, json.path,
+                `${d.getFullYear()}_${(d.getMonth() + 1).toString().padStart(2, '0')}_${(d.getDate()).toString().padStart(2, '0')}-${d.getHours().toString().padStart(2, '0')}.${d.getMinutes().toString().padStart(2, '0')}`);
         }
     },
     stdoutFrontend: function(win, output, id) {

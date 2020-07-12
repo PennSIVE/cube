@@ -2,19 +2,38 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const { autoUpdater } = require("electron-updater");
 const fixPath = require('fix-path');
 const chokidar = require('chokidar');
+const prettyBytes = require('pretty-bytes');
+const path = require('path');
 const state = require('./src/state.js');
 const api = require('./src/api.js');
 const docker = require('./src/docker.js');
 const singularity = require('./src/singularity.js');
 const rsync = require('./src/rsync.js');
-const watcher = chokidar.watch([], {
-    ignored: /(^|[\/\\])\../, // ignore dotfiles
-    persistent: true
-});
 let win = undefined;
 
 
 function init() {
+    delete process.env.DISPLAY; // req'd so ssh connection terminates when executing single commands e.g. ssh user@cubic cmd
+    singularity.rsyncInstance = rsync;
+    let watcher = chokidar.watch([], {
+        ignored: /(^|[\/\\])\../, // ignore dotfiles
+        persistent: true
+    });
+    watcher.on('all', (event, fn, stats) => {
+        if (!event.includes("Dir")) {
+            fn = path.dirname(fn)
+        }
+        if (!rsync.watched.has(fn)) {
+            rsync.watched.add(fn);
+        }
+        if (!state.data.syncNeeded.has(fn)) {
+            state.data.syncNeeded.add(fn);   
+        }
+        rsync.fileStats[fn] = stats;
+        rsync.fileStats[fn].size = prettyBytes(rsync.fileStats[fn].size);
+        win.webContents.send('asynchronous-message', { type: 'remakeDataTab', files: rsync.watched, notSynced: state.data.syncNeeded, stats: rsync.fileStats });
+    });
+    rsync.watcher = watcher;
     fixPath();
     createWindow();
     autoUpdater.checkForUpdatesAndNotify();
@@ -32,7 +51,7 @@ function createWindow() {
     });
     win.loadFile('html/index.html');
     win.webContents.on('did-finish-load', () => {
-        state.refreshWindowState(win, watcher, {
+        state.refreshWindowState(win, {
             singularity: singularity,
             docker: docker,
             rsync: rsync
@@ -64,7 +83,7 @@ app.on('activate', () => {
 });
 
 ipcMain.on('asynchronous-message', (event, json) => {
-    api.request(json, state, win, watcher, docker, singularity, rsync);
+    api.request(json, state, win, docker, singularity, rsync);
 });
 
 app.whenReady().then(init);

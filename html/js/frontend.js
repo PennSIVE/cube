@@ -255,11 +255,11 @@ $('#configModal').on('show.bs.modal', function (event) {
     $('#bind-mounts').html('');
     $('#cubic-options').html(`<div id="ncpus" class="d-none" style="-webkit-app-region: no-drag;">
     <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
-    <input type="range" class="custom-range" id="cpu-range" min="1" max="16" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
+    <input type="range" class="custom-range" id="cpu-range" min="1" max="64" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
 </div>
 <div id="nmem" class="d-none" style="-webkit-app-region: no-drag;">
     <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
-    <input type="range" class="custom-range" id="mem-range" min="1" max="64" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
+    <input type="range" class="custom-range" id="mem-range" min="1" max="1024" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
 </div>`);
     addBindMount();
     // add tag option
@@ -330,6 +330,77 @@ $('#outputModal').on('show.bs.modal', function (event) {
     ipcRenderer.send('asynchronous-message', { type: 'getOutput', id: $button.data('id'), runtime: $button.data('runtime') });
 });
 
+$('#backupModal').on('show.bs.modal', function (event) {
+    let $button = $(event.relatedTarget);
+    let times = [];
+    let now = Math.floor(new Date().getTime() / 1000);
+    let rounded = Math.floor(now / (15 * 60)) * (15 * 60); // round down to nearest 15m
+    for (let n = 0; n < 4; n++) {
+        times.push(rounded - (n * 900));
+    }
+    times.push(
+        Math.floor(now / (60 * 60)) * (60 * 60) - (3600 * 2)
+    );
+    times.push(
+        Math.floor(now / (60 * 60)) * (60 * 60) - (3600 * 16)
+    );
+    times.push(
+        Math.floor(now / (60 * 60)) * (60 * 60) - (3600 * 40)
+    );
+    times.push(
+        Math.floor(now / (60 * 60)) * (60 * 60) - (3600 * 88)
+    );
+    times.push(
+        Math.floor(now / (60 * 60)) * (60 * 60) - (3600 * 184)
+    );
+    $('#backups-avail').html(times.map((time) => `
+        <option value="${new Date(time * 1000).toString()}">${new Date(time * 1000).toLocaleDateString()} ${new Date(time * 1000).toLocaleTimeString()}</option>
+    `).join(''));
+    $('#backup-path').val($button.data('path'));
+});
+
+function dataTab(opts) {
+    let tbody = '';
+    Array.from(opts.files).forEach((item, i) => tbody += `
+    <tr>
+    <td><code>${item}</code></td>
+    <td style="white-space: nowrap">${opts.stats[item].size}</td>
+    <td>Last changed ${opts.stats[item].ctime.toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' }) + ' ' + opts.stats[item].ctime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</td>
+    <td>
+    <div class="dropleft">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdown${i}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Actions
+    </button>
+    <div class="dropdown-menu" aria-labelledby="dropdown${i}">
+        <a class="dropdown-item" href="#">Stop syncing</a>
+        <a class="dropdown-item" href="#">Stop and remove from CUBIC</a>
+        <a class="dropdown-item" href="#" data-path="${item}" data-target="#backupModal" data-toggle="modal">Restore from backup</a>
+    </div>
+    </div>
+    </td>
+    </tr>
+    `);
+    $('#data-content').html(`
+    <table class="table table-borderless">
+        <thead class="thead-dark">
+            <tr>
+            <th scope="col">Path</th>
+            <th scope="col">Size</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        ${tbody}
+        </tbody>
+    </table>
+    `);
+}
+
+function restoreBackup() {
+    ipcRenderer.send('asynchronous-message', { type: 'restoreBackup', path: $('#backup-path').val(), when: $('#backups-avail').find(":selected").val() });
+}
+
 ipcRenderer.on('asynchronous-message', (event, json) => {
     if (json.type === 'log') {
         let status = document.getElementById('status');
@@ -389,6 +460,8 @@ ipcRenderer.on('asynchronous-message', (event, json) => {
         $('#stdout').text(json.output);
     } else if (json.type === 'stderr') {
         $('#stderr').text(json.output);
+    } else if (json.type === 'remakeDataTab') {
+        dataTab(json);
     }
 
 });
