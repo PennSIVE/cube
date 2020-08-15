@@ -10,6 +10,7 @@ const api = {
                     } else {
                         singularity.run(deployment, state, win);
                     }
+                    break;
                 }
     
             }
@@ -20,7 +21,7 @@ const api = {
                 delete state.data.docker.containers[json.uuid];
             }
             if (state.data.singularity.containers[json.uuid] !== undefined) {
-                singularity.removeContainer(state.data.singularity.containers[json.uuid].id);
+                singularity.removeContainer(state.data.user, state.data.singularity.containers[json.uuid].id);
                 delete state.data.singularity.containers[json.uuid];
             }
             state.save();
@@ -31,8 +32,10 @@ const api = {
             state.data.deployments.push(json.deployment);
             for (let index = 0; index < json.deployment.bindMounts.length; index++) {
                 const mount = json.deployment.bindMounts[index];
-                rsync.watcher.add(mount.local);
-                rsync.transfer(state, win, mount.local);
+                if (mount.remote === false) { // need to upload path, watch for updates
+                    rsync.watcher.add(mount.local);
+                    rsync.transfer(state, win, mount.local);   
+                }
             }
             state.save();
         } else if (json.type === 'saveRefreshInterval') {
@@ -55,11 +58,11 @@ const api = {
                     module.exports.stderrFrontend(win, data, json.id);
                 });
             } else if (json.runtime === 'singularity') {
-                const stdoutLogs = exec(`ssh -X -Y -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.data.user}@cubic-login "cat \\$HOME/.cubedata/.stdout.${json.id}"`);
+                const stdoutLogs = exec(`ssh -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.data.user}@cubic-login "cat \\$HOME/.cubedata/.stdout.${json.id}"`);
                 stdoutLogs.stdout.on('data', function (data) {
                     module.exports.stdoutFrontend(win, data, json.id);
                 });
-                const stderrLogs = exec(`ssh -X -Y -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.data.user}@cubic-login "cat \\$HOME/.cubedata/.stderr.${json.id}"`);
+                const stderrLogs = exec(`ssh -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.data.user}@cubic-login "cat \\$HOME/.cubedata/.stderr.${json.id}"`);
                 stderrLogs.stdout.on('data', function (data) {
                     module.exports.stderrFrontend(win, data, json.id);
                 });

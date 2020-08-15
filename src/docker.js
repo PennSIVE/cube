@@ -24,7 +24,7 @@ const docker = {
         }
     },
     ps: function(state, win) {
-        const ps = exec("docker ps -a --format '{{json .}}'");
+        const ps = exec("docker ps --format '{{json .}}'");
         ps.stdout.on('data', function (data) {
             let arrayJobs = {};
             let containers = {};

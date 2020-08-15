@@ -38,6 +38,8 @@
             </div>
             <div id="cubic-options">
             </div>
+            <div id="pmacs-options">
+            </div>
             <div id="array-job">
             </div>
             <div id="bind-mounts"></div>
@@ -106,7 +108,7 @@
       <div class="col">
         <h1 style="text-align: right;"><code>cube control</code></h1>
         <hr>
-        <div id="alerts"><p class="text-center">Trying to connect to CUBIC...</p></div>
+        <div id="alerts"><p class="text-center">Checking remote connections...</p></div>
         <p>Logged in as <span class="text-danger" contenteditable="true" style="text-decoration: underline;" id="username">nobody</span>
           <button id="save-username" type="button" class="btn btn-outline-primary btn-sm pt-0 pb-0">Save</button></p>
         <div class="row">
@@ -161,6 +163,30 @@
                       <p class="card-text">Requires a license. Contact Tim for one or apply for your own <a target="_blank"
                           href="https://surfer.nmr.mgh.harvard.edu/registration.html">here</a>.</p>
                       <a href="#" data-toggle="modal" data-org="pennsive" data-image="freesurfer" data-tags="latest,3.6,4.0"
+                        data-target="#configModal" class="btn btn-primary">Configure</a>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">Flair star</h5>
+                      <p class="card-text">Make a flair star from flair and EPI images.</p>
+                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="flairstar" data-tags="latest"
+                        data-target="#configModal" class="btn btn-primary">Configure</a>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">Preprocessing</h5>
+                      <p class="card-text">Run N4 bias correction, ANTS registration, skull stripping, WhiteStripe on a T1, flair pair.</p>
+                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="preprocessing" data-tags="latest"
+                        data-target="#configModal" class="btn btn-primary">Configure</a>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">JLF</h5>
+                      <p class="card-text">Run joint label fusion</p>
+                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="jlf" data-tags="latest"
                         data-target="#configModal" class="btn btn-primary">Configure</a>
                     </div>
                   </div>

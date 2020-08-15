@@ -41,7 +41,7 @@ const state = {
                             for (let i = 0; i < mounts.length; i++) {
                                 const mount = mounts[i];
                                 const file = mount.local;
-                                if (!files.includes(file)) {
+                                if (!files.includes(file) && mount.remote === false) {
                                     callbacks.rsync.watcher.add(file);
                                     callbacks.rsync.transfer(state, win, file);
                                     files.push(file);

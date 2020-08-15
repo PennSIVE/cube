@@ -48,9 +48,9 @@ const rsync = {
                 if (code === 0) { // success!
                     win.webContents.send('asynchronous-message', { type: 'rsyncComplete', path: path });
                     state.data.syncNeeded.delete(path);
-                    win.webContents.send('asynchronous-message', { type: 'clearAlert' });
+                    // win.webContents.send('asynchronous-message', { type: 'alert', message: `Connected to ${state.data.cloud}`, level: 'success' });
                 } else {
-                    win.webContents.send('asynchronous-message', { type: 'alert', message: `<strong>ssh ${state.data.user}@cubic-login</strong> failed; Unable to connect to CUBIC.` });
+                    win.webContents.send('asynchronous-message', { type: 'alert', message: 'No remote connection', level: 'warning' });
                 }
             }, function (data) {
                 // parse progress
@@ -77,15 +77,15 @@ const rsync = {
                 if (code === 0) {
                     win.webContents.send('asynchronous-message', { type: 'rsyncComplete', path: path });
                     state.data.syncNeeded.delete(path);
-                    win.webContents.send('asynchronous-message', { type: 'clearAlert' });
+                    // win.webContents.send('asynchronous-message', { type: 'alert', message: `Connected to ${state.data.cloud}`, level: 'success' });
                     // overwrite original with backup and add to watched list
-                    const restore = exec(`ssh -X -Y -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.data.user}@cubic-login "mv ~/.cubedata${path}/.snapshots/${timeStr} ~/.cubedata${path}"`);
+                    const restore = exec(`ssh -oStrictHostKeyChecking=no -o ConnectTimeout=10 -oCheckHostIP=no -oUserKnownHostsFile=/dev/null ${state.data.user}@cubic-login "mv ~/.cubedata${path}/.snapshots/${timeStr} ~/.cubedata${path}"`);
                     restore.on('exit', (code) => {
                         module.exports.watcher.add(path);
-                        win.webContents.send('asynchronous-message', { type: 'alert', message: "<strong>Success!</strong> Restored " + path + " from " + timeStr });
+                        win.webContents.send('asynchronous-message', { type: 'alert', message: "<strong>Success!</strong> Restored " + path + " from " + timeStr, level: 'success' });
                     });
                 } else {
-                    win.webContents.send('asynchronous-message', { type: 'alert', message: `<strong>ssh ${state.data.user}@cubic-login</strong> failed; Unable to connect to CUBIC.` });
+                    win.webContents.send('asynchronous-message', { type: 'alert', message: 'No remote connection', level: 'warning' });
                 }
             }, function (data) {
                 win.webContents.send('asynchronous-message', { type: 'rsync', path: path, progress: module.exports.progress(data.toString()) })

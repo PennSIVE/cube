@@ -66,7 +66,8 @@ function selectDir(e) {
             formData.bindMounts.push({
                 id: id,
                 local: values.filePaths[0],
-                container: null
+                container: null,
+                remote: false
             });
         } else {
             e.target.classList = 'is-invalid custom-file-input';
@@ -79,14 +80,17 @@ function addBindMount() {
     let html = `<div class="mt-2 data-option" id="upload-data-select${rand}">
                 Add data, code into environment
                 <div class="input-group">
-                <div class="custom-file input-group-prepend">
-                    <input type="file" class="custom-file-input" id="${rand}" onclick="selectDir(event)" webkitdirectory directory multiple>
-                    <label class="custom-file-label" for="${rand}">Choose directory</label>
+                <div class="custom-file input-group-prepend d-none" id="${rand}-file-picker-container">
+                    <input type="file" class="custom-file-input" id="${rand}-file-picker" onclick="selectDir(event)" webkitdirectory directory multiple>
+                    <label class="custom-file-label" for="${rand}-file-picker">Choose directory</label>
+                </div>
+                <div class="custom-file input-group-prepend" id="${rand}-file-input-container">
+                    <input type="text" class="form-control rounded-0" id="${rand}-file-input" placeholder="Path on host">
                 </div>
                 <div class="input-group-prepend">
                     <span class="input-group-text">&rarr;</span>
                 </div>
-                <input type="text" aria-label="Container path" placeholder="Path in container" class="form-control container_path" data-key="${rand}">
+                <input type="text" aria-label="Container path" placeholder="Path in container" class="form-control container_path" data-key="${rand}-file-input" id="${rand}_container_path">
                 <div class="input-group-append">
                     <span class="input-group-text">
                     <button type="button" class="close" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">
@@ -95,7 +99,21 @@ function addBindMount() {
                     </span>
                 </div>
                 </div>
-                <small id="${rand}-help" class="text-success">&nbsp;</small>
+                <div class="custom-control custom-switch pl-0">
+                <label class="mr-3 pr-4" for="${rand}-switch">Remote path</label>
+                <input type="checkbox" class="custom-control-input" id="${rand}-switch" onchange=" if (this.checked) {
+                    document.getElementById('${rand}-file-picker-container').classList.remove('d-none');
+                    document.getElementById('${rand}-file-input-container').classList.add('d-none');
+                    document.getElementById('${rand}_container_path').dataset.key = '${rand}-file-picker';
+                } else {
+                    document.getElementById('${rand}-file-picker-container').classList.add('d-none');
+                    document.getElementById('${rand}-file-input-container').classList.remove('d-none');
+                    document.getElementById('${rand}_container_path').dataset.key = '${rand}-file-input';
+                }
+                ">
+                <label class="custom-control-label" for="${rand}-switch">Local path</label>
+                </div>
+                <small id="${rand}-file-picker-help" class="text-success">&nbsp;</small>
             </div>`;
     $('#bind-mounts').append(html);
 }
@@ -121,24 +139,41 @@ function createDeployment(e) {
         tasks: formData.tasks,
         bindMounts: []
     };
+    // loop over all the bind mount paths (in the container)
     $('.container_path').each(function (i, e) {
-        let k = e.getAttribute('data-key');
-        for (let i = 0; i < formData.bindMounts.length; i++) {
-            if (k === formData.bindMounts[i].id) {
-                formData.bindMounts[i].container = e.value;
-                deployment.bindMounts.push(formData.bindMounts[i])
-                break;
+        let k = e.getAttribute('data-key'); // references the bind mount path on the host
+        if (k.includes('file-picker')) { // if selectDir was used
+            for (let i = 0; i < formData.bindMounts.length; i++) {
+                if (k === formData.bindMounts[i].id) {
+                    formData.bindMounts[i].container = e.value;
+                    deployment.bindMounts.push(formData.bindMounts[i]);
+                    break;
+                }
             }
+        } else if (document.getElementById(k).value.length > 0) { // if it's just a text box + it has a value
+            deployment.bindMounts.push({
+                local: document.getElementById(k).value,
+                container: e.value,
+                remote: true
+            });
         }
     });
+    // save
     ipcRenderer.send('asynchronous-message', {
         type: 'saveDeployment',
         deployment: deployment
     });
+    // add to DOM
     addDeployment(deployment);
 }
 
 function addDeployment(deployment) {
+    let remoteToSync = 0;
+    for (let index = 0; index < deployment.bindMounts.length; index++) {
+        if (deployment.bindMounts[index].remote === false) {
+            remoteToSync++;
+        }
+    }
     let rand = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     let html = `<div class="card mb-2">
                 <div class="card-body">
@@ -150,7 +185,7 @@ function addDeployment(deployment) {
                     <li><code class="bind-mount-path" data-button="${rand}">${item.local}</code> &rarr; <code>${item.container}</code></li>
                 `).join('')}
                 ${deployment.bindMounts.length > 0 ? '</ul>' : ''}
-                <button type="button" id="${rand}" onclick="createContainer(event, '${deployment.uuid}')" class="btn btn-primary" data-tosync="${deployment.bindMounts.length}" ${deployment.bindMounts.length > 0 ? 'disabled' : ''}>Create container</button>
+                <button type="button" id="${rand}" onclick="createContainer(event, '${deployment.uuid}')" class="btn btn-primary" data-tosync="${remoteToSync}" ${remoteToSync > 0 ? 'disabled' : ''}>Create container</button>
                 <button type="button" class="btn btn-danger" onclick="deleteDeployment(event, '${deployment.uuid}')">Delete deployment</button>
                 <!-- <a href="#" class="card-link">More info</a> -->
                 <!-- more info shows commands you would have to enter to create container -->
@@ -213,8 +248,9 @@ function deleteDeployment(e, id) {
 
 function machineSelect(e) {
     e.preventDefault();
-    if ($(this).val() === 'cubic') {
-        formData.machine = 'cubic';
+    let val = $(this).val();
+    if (val === 'cubic' || val === 'pmacs') {
+        formData.machine = val;
         $('#ncpus').removeClass('d-none');
         $('#nmem').removeClass('d-none');
     } else {
@@ -254,13 +290,21 @@ $('#configModal').on('show.bs.modal', function (event) {
     </div>`);
     $('#bind-mounts').html('');
     $('#cubic-options').html(`<div id="ncpus" class="d-none" style="-webkit-app-region: no-drag;">
-    <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
-    <input type="range" class="custom-range" id="cpu-range" min="1" max="64" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
-</div>
-<div id="nmem" class="d-none" style="-webkit-app-region: no-drag;">
-    <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
-    <input type="range" class="custom-range" id="mem-range" min="1" max="1024" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
-</div>`);
+        <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
+        <input type="range" class="custom-range" id="cpu-range" min="1" max="64" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
+    </div>
+    <div id="nmem" class="d-none" style="-webkit-app-region: no-drag;">
+        <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
+        <input type="range" class="custom-range" id="mem-range" min="1" max="1024" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
+    </div>`);
+    $('#pmacs-options').html(`<div id="ncpus" class="d-none" style="-webkit-app-region: no-drag;">
+        <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
+        <input type="range" class="custom-range" id="cpu-range" min="1" max="50" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
+    </div>
+    <div id="nmem" class="d-none" style="-webkit-app-region: no-drag;">
+        <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
+        <input type="range" class="custom-range" id="mem-range" min="1" max="512" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
+    </div>`);
     addBindMount();
     // add tag option
     $('#tags').html(`<label for="tag-select">Select version</label><select class="custom-select mb-2" name="tag-select" id="tag-select" required>
@@ -298,6 +342,7 @@ $('#configModal').on('show.bs.modal', function (event) {
     <select class="custom-select" name="machine-select" id="machine-select" required>
     <option value="local">My computer</option>
     <option value="cubic">CUBIC</option>
+    <option value="pmacs">PMACS</option>
     </select>`);
         $('#machine-select').on('change', machineSelect);
     }
@@ -442,14 +487,14 @@ ipcRenderer.on('asynchronous-message', (event, json) => {
             }
         });
     } else if (json.type === 'alert') {
+        let level = (json.level === undefined) ? 'warning' : json.level;
         $('#alerts').html(`
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-    ${json.message}
-    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-    </button>
-    </div>
-    `);
+            <div class="alert alert-${level} alert-dismissible fade show" role="alert">
+            ${json.message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            </div>`);
     } else if (json.type === 'clearAlert') {
         $('#alerts').html('');
     } else if (json.type === 'rsync') {
