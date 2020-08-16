@@ -20,7 +20,8 @@ function init() {
         persistent: true
     });
     watcher.on('all', (event, fn, stats) => {
-        if (!event.includes("Dir")) {
+        // every time a watched file changed, add to re sync list
+        if (!event.includes("Dir")) { // ignore directories since we're watching files
             fn = path.dirname(fn)
         }
         if (!rsync.watched.has(fn)) {
@@ -31,7 +32,7 @@ function init() {
         }
         rsync.fileStats[fn] = stats;
         rsync.fileStats[fn].size = prettyBytes(rsync.fileStats[fn].size);
-        win.webContents.send('asynchronous-message', { type: 'remakeDataTab', files: rsync.watched, notSynced: state.data.syncNeeded, stats: rsync.fileStats });
+        win.webContents.send('asynchronous-message', { type: 'remakeDataTab', local: rsync.watched, notSynced: state.data.syncNeeded, stats: rsync.fileStats, remote: state.findRemoteMounts() });
     });
     rsync.watcher = watcher;
     fixPath();

@@ -33,8 +33,8 @@ const api = {
             for (let index = 0; index < json.deployment.bindMounts.length; index++) {
                 const mount = json.deployment.bindMounts[index];
                 if (mount.remote === false) { // need to upload path, watch for updates
-                    rsync.watcher.add(mount.local);
-                    rsync.transfer(state, win, mount.local);   
+                    rsync.watcher.add(mount.hostPath);
+                    rsync.transfer(state, win, mount.hostPath);   
                 }
             }
             state.save();

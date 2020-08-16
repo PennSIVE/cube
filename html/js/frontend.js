@@ -65,8 +65,8 @@ function selectDir(e) {
             document.getElementById(id + '-help').innerText = 'You selected ' + values.filePaths[0];
             formData.bindMounts.push({
                 id: id,
-                local: values.filePaths[0],
-                container: null,
+                hostPath: values.filePaths[0],
+                containerPath: null,
                 remote: false
             });
         } else {
@@ -145,15 +145,15 @@ function createDeployment(e) {
         if (k.includes('file-picker')) { // if selectDir was used
             for (let i = 0; i < formData.bindMounts.length; i++) {
                 if (k === formData.bindMounts[i].id) {
-                    formData.bindMounts[i].container = e.value;
+                    formData.bindMounts[i].containerPath = e.value;
                     deployment.bindMounts.push(formData.bindMounts[i]);
                     break;
                 }
             }
         } else if (document.getElementById(k).value.length > 0) { // if it's just a text box + it has a value
             deployment.bindMounts.push({
-                local: document.getElementById(k).value,
-                container: e.value,
+                hostPath: document.getElementById(k).value,
+                containerPath: e.value,
                 remote: true
             });
         }
@@ -182,7 +182,7 @@ function addDeployment(deployment) {
                 <p class="card-text">Run <code>${deployment.cmd}</code> in ${deployment.image}:${deployment.tag} on ${deployment.machine}${deployment.bindMounts.length > 0 ? ' with ' + deployment.bindMounts.length + ' bind mounts:' : '.'}</p>
                 ${deployment.bindMounts.length > 0 ? '<ul>' : ''}
                 ${deployment.bindMounts.map((item, i) => `
-                    <li><code class="bind-mount-path" data-button="${rand}">${item.local}</code> &rarr; <code>${item.container}</code></li>
+                    <li><code class="bind-mount-path" data-button="${rand}">${item.hostPath}</code> &rarr; <code>${item.containerPath}</code></li>
                 `).join('')}
                 ${deployment.bindMounts.length > 0 ? '</ul>' : ''}
                 <button type="button" id="${rand}" onclick="createContainer(event, '${deployment.uuid}')" class="btn btn-primary" data-tosync="${remoteToSync}" ${remoteToSync > 0 ? 'disabled' : ''}>Create container</button>
@@ -319,12 +319,12 @@ $('#configModal').on('show.bs.modal', function (event) {
     <div class="custom-file">
     <input type="file" class="custom-file-input" id="freesurfer-lic" oninput="
         if (this.dataset.formDataBindMounts === undefined ) {
-            formData.bindMounts.push({local: this.files[0].path, container: '/usr/local/freesurfer/license.txt' });
+            formData.bindMounts.push({hostPath: this.files[0].path, containerPath: '/usr/local/freesurfer/license.txt' });
             this.dataset.formDataBindMounts = 'true';
         } else {
             for (let index = 0; index < formData.bindMounts.length; index++) {
-            if (formData.bindMounts[index].container === '/usr/local/freesurfer/license.txt') {
-                formData.bindMounts[index].local = this.files[0].path;
+            if (formData.bindMounts[index].containerPath === '/usr/local/freesurfer/license.txt') {
+                formData.bindMounts[index].hostPath = this.files[0].path;
                 break;
             }
             }
@@ -409,8 +409,10 @@ function dataTab(opts) {
     Array.from(opts.files).forEach((item, i) => tbody += `
     <tr>
     <td><code>${item}</code></td>
-    <td style="white-space: nowrap">${opts.stats[item].size}</td>
-    <td>Last changed ${opts.stats[item].ctime.toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' }) + ' ' + opts.stats[item].ctime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</td>
+    <td>
+        <p>Local path (${opts.stats[item].size})</p>
+        <p>Last changed ${opts.stats[item].ctime.toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' })} ${opts.stats[item].ctime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+    </td>
     <td>
     <div class="dropleft">
     <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdown${i}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -418,10 +420,18 @@ function dataTab(opts) {
     </button>
     <div class="dropdown-menu" aria-labelledby="dropdown${i}">
         <a class="dropdown-item" href="#">Stop syncing</a>
-        <a class="dropdown-item" href="#">Stop and remove from CUBIC</a>
+        <a class="dropdown-item" href="#">Stop and remove from remote</a>
         <a class="dropdown-item" href="#" data-path="${item}" data-target="#backupModal" data-toggle="modal">Restore from backup</a>
     </div>
     </div>
+    </td>
+    </tr>
+    `);
+    opts.remote.forEach((item, i) => tbody += `
+    <tr>
+    <td><code>${item.hostPath}</code></td>
+    <td><p>Remote path on ${item.host.toUpperCase()}</p></td>
+    <td>
     </td>
     </tr>
     `);
@@ -430,7 +440,6 @@ function dataTab(opts) {
         <thead class="thead-dark">
             <tr>
             <th scope="col">Path</th>
-            <th scope="col">Size</th>
             <th scope="col">Status</th>
             <th scope="col">Actions</th>
             </tr>

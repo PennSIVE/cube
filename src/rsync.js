@@ -96,7 +96,7 @@ const rsync = {
         for (let i = 0; i < state.data.syncNeeded.size; i++) {
             module.exports.transfer(state, win, state.data.syncNeeded[i]);
         }
-        win.webContents.send('asynchronous-message', { type: 'remakeDataTab', files: module.exports.watched, notSynced: state.data.syncNeeded, stats: module.exports.fileStats });
+        win.webContents.send('asynchronous-message', { type: 'remakeDataTab', files: module.exports.watched, notSynced: state.data.syncNeeded, stats: module.exports.fileStats, remote: state.findRemoteMounts() });
         if (loop) {
             setTimeout(() => module.exports.interval(state, win, true), 900000) // = 15 mins
         }

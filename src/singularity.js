@@ -31,7 +31,7 @@ const singularity = {
         let command = 'singularity exec';
         for (let i = 0; i < opts.bindMounts.length; i++) {
             const mount = opts.bindMounts[i];
-            command += ` -B ~/.cubedata${mount.local}:${mount.container}`;
+            command += ` -B ~/.cubedata${mount.hostPath}:${mount.containerPath}`;
         }
         let singularity;
         if (module.exports.host === 'cubic') {

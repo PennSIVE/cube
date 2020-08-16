@@ -40,7 +40,7 @@ const state = {
                             const mounts = state.data.deployments[key].bindMounts;
                             for (let i = 0; i < mounts.length; i++) {
                                 const mount = mounts[i];
-                                const file = mount.local;
+                                const file = mount.hostPath;
                                 if (!files.includes(file) && mount.remote === false) {
                                     callbacks.rsync.watcher.add(file);
                                     callbacks.rsync.transfer(state, win, file);
@@ -68,6 +68,23 @@ const state = {
 
     addContainerFrontend: function(win, container) {
         win.webContents.send('asynchronous-message', Object.assign({ type: 'addContainer' }, container));
+    },
+
+    findRemoteMounts: function() {
+        let mounts = [];
+        for (let i = 0; i < module.exports.data.deployments.length; i++) {
+            const deployment = module.exports.data.deployments[i];
+            for (let j = 0; j < deployment.bindMounts.length; j++) {
+                const mount = deployment.bindMounts[j];
+                if (mount.remote) {
+                    mounts.push({
+                        hostPath: mount.hostPath,
+                        host: deployment.machine
+                    });
+                }
+            }
+        }
+        return mounts;
     }
 }
 

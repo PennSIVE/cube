@@ -6,7 +6,7 @@ const docker = {
         let command = 'docker run -d';
         for (let i = 0; i < opts.bindMounts.length; i++) {
             const mount = opts.bindMounts[i];
-            command += ' -v ' + mount.local + ':' + mount.container;
+            command += ' -v ' + mount.hostPath + ':' + mount.containerPath;
         }
         // handle special containers
         if (opts.image === 'rstudio') {
