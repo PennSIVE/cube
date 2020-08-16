@@ -124,6 +124,7 @@ function createDeployment(e) {
     $('#deployments-tab').tab('show');
     formData['machine'] = document.getElementById('machine-select').value;
     formData['cmd'] = document.getElementById('cmd').value;
+    formData['gpu'] = (document.getElementById('ngpus') === undefined) ? '' : document.getElementById('ngpus').value;
     formData['tag'] = document.getElementById('tag-select').value;
     let uuid = uuidv4();
     let deployment = {
@@ -135,6 +136,7 @@ function createDeployment(e) {
         cmd: formData.cmd,
         cpu: formData.cpu,
         mem: formData.mem,
+        gpu: formData.gpu,
         indexVariable: formData.indexVariable,
         tasks: formData.tasks,
         bindMounts: []
@@ -249,14 +251,42 @@ function deleteDeployment(e, id) {
 function machineSelect(e) {
     e.preventDefault();
     let val = $(this).val();
-    if (val === 'cubic' || val === 'pmacs') {
+    if (val === 'cubic') {
         formData.machine = val;
-        $('#ncpus').removeClass('d-none');
-        $('#nmem').removeClass('d-none');
+        $('#pmacs-options').html('');
+        $('#cubic-options').html(`<div id="ncpus" style="-webkit-app-region: no-drag;">
+            <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
+            <input type="range" class="custom-range" id="cpu-range" min="1" max="64" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
+        </div>
+        <div id="nmem" style="-webkit-app-region: no-drag;">
+            <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
+            <input type="range" class="custom-range" id="mem-range" min="1" max="1024" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
+        </div>
+        <select class="custom-select" aria-describedby="gpuHelpBlock" id="ngpus">
+            <option value="" selected>No GPUs</option>
+            <option value="-l V100">1 V100 GPU (optimized for TF)</option>
+            <option value="-l gpu">1 GPU</option>
+            <option value="-l gpu=2">2 GPUs</option>
+        </select>
+        <small id="gpuHelpBlock" class="form-text text-muted">
+            See <a href="https://cbica-wiki.uphs.upenn.edu/wiki/index.php/GPU_Computing" target="_blank">here</a> for additional information on CUBICs GPUs.
+        </small>
+        `);
+    } else if (val === 'pmacs') {
+        formData.machine = val;
+        $('#cubic-options').html('');
+        $('#pmacs-options').html(`<div id="ncpus" style="-webkit-app-region: no-drag;">
+            <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
+            <input type="range" class="custom-range" id="cpu-range" min="1" max="50" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
+        </div>
+        <div id="nmem" style="-webkit-app-region: no-drag;">
+            <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
+            <input type="range" class="custom-range" id="mem-range" min="1" max="512" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
+        </div>`);
     } else {
         formData.machine = 'local';
-        $('#ncpus').addClass('d-none');
-        $('#nmem').addClass('d-none');
+        $('#cubic-options').html('');
+        $('#pmacs-options').html('');
     }
 }
 $('#configModal').on('show.bs.modal', function (event) {
@@ -289,22 +319,6 @@ $('#configModal').on('show.bs.modal', function (event) {
     </div>
     </div>`);
     $('#bind-mounts').html('');
-    $('#cubic-options').html(`<div id="ncpus" class="d-none" style="-webkit-app-region: no-drag;">
-        <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
-        <input type="range" class="custom-range" id="cpu-range" min="1" max="64" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
-    </div>
-    <div id="nmem" class="d-none" style="-webkit-app-region: no-drag;">
-        <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
-        <input type="range" class="custom-range" id="mem-range" min="1" max="1024" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
-    </div>`);
-    $('#pmacs-options').html(`<div id="ncpus" class="d-none" style="-webkit-app-region: no-drag;">
-        <label for="cpu-range">Number of CPUs <span id="cpu-readout" class="text-success">1</span></label>
-        <input type="range" class="custom-range" id="cpu-range" min="1" max="50" step="1" value="1" onchange="$('#cpu-readout').text(event.target.value); formData.cpu = event.target.value;">
-    </div>
-    <div id="nmem" class="d-none" style="-webkit-app-region: no-drag;">
-        <label for="mem-range">Memory <span id="mem-readout" class="text-success">8</span>GB</label>
-        <input type="range" class="custom-range" id="mem-range" min="1" max="512" step="1" value="8" onchange="$('#mem-readout').text(event.target.value); formData.mem = event.target.value;">
-    </div>`);
     addBindMount();
     // add tag option
     $('#tags').html(`<label for="tag-select">Select version</label><select class="custom-select mb-2" name="tag-select" id="tag-select" required>

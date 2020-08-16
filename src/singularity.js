@@ -37,6 +37,9 @@ const singularity = {
         if (module.exports.host === 'cubic') {
             command += ` /cbica/home/robertft/singularity_images/${opts.image}_${opts.tag}.sif ${escapeShell(opts.cmd)}`;
             let sgeOpts = `#$ -o \\$HOME/.cubedata/.stdout.\\$JOB_ID\\n#$ -e \\$HOME/.cubedata/.stderr.\\$JOB_ID\\n#$ -l h_vmem=${opts.mem}G\\n#$ -pe threaded ${opts.cpu}\\n`;
+            if (typeof opts.gpu === 'string' && opts.gpu.length > 0) {
+                sgeOpts += `#$ ${opts.gpu}\\n`;
+            }
             if (opts.tasks !== null && opts.tasks !== undefined) {
                 sgeOpts += `#$ -t 1-${opts.tasks}\\nexport ${opts.indexVariable}=\\\$SGE_TASK_ID\\n`;
             }
