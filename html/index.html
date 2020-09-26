@@ -44,10 +44,15 @@
             </div>
             <div id="bind-mounts"></div>
             <button type="button" class="btn btn-outline-primary btn-sm float-right" onclick="addBindMount()" style="position: relative;bottom:20px">Add another mount</button>
-            <div class="form-group">
+            <div class="form-group pb-0 mb-0">
               <label for="cmd">Command to execute</label>
               <input type="text" placeholder="Rscript /path/to/mounted/script.R" class="form-control" id="cmd">
             </div>
+            <div class="custom-control custom-switch pl-0">
+              <label class="mr-3 pr-4" for="entrypoint-switch">Default entrypoint</label>
+              <input type="checkbox" class="custom-control-input" id="entrypoint-switch">
+              <label class="custom-control-label" for="entrypoint-switch">Bourne shell</label>
+              </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -135,34 +140,21 @@
               <div class="tab-pane fade show active" id="images" role="tabpanel" aria-labelledby="images-tab">
                 <div class="card-columns">
                   <div class="card">
-                    <img src="./images/Rlogo.svg" class="card-img-top pl-4 pr-4" alt="Base R">
+                    <!-- <img src="./images/Rlogo.svg" class="card-img-top pl-4 pr-4" alt="Base R"> -->
                     <div class="card-body">
                       <h5 class="card-title">R</h5>
-                      <p class="card-text">Standard R environment with ANTsR, ITKR, FSL, etc.</p>
+                      <p class="card-text">General-purpose R environment with AFNI, ANTs, Convert3D, FreeSurfer, FSL, MINC etc.</p>
                       <a href="#" data-toggle="modal" data-org="pennsive" data-image="neuror" data-tags="latest,3.6,4.0"
                         data-target="#configModal" class="btn btn-primary">Configure</a>
                     </div>
                   </div>
                   <div class="card">
-                    <img
-                      src="./images/rstudio.svg"
-                      class="card-img-top" alt="R studio">
+                    <!-- <img src="./images/rstudio.svg" class="card-img-top" alt="R studio"> -->
                     <div class="card-body">
                       <h5 class="card-title">R studio</h5>
                       <p class="card-text">Start R studio at <a target="_blank" href="http://localhost">http://localhost</a>. Note: only
                         available for local creation.</p>
                       <a href="#" data-toggle="modal" data-org="pennsive" data-image="rstudio" data-tags="latest,3.6,4.0" data-cmd="/init"
-                        data-target="#configModal" class="btn btn-primary">Configure</a>
-                    </div>
-                  </div>
-                  <div class="card">
-                    <img src="./images/freesurfer.png"
-                      class="card-img-top" alt="Freesurfer">
-                    <div class="card-body">
-                      <h5 class="card-title">Freesurfer</h5>
-                      <p class="card-text">Requires a license. Contact Tim for one or apply for your own <a target="_blank"
-                          href="https://surfer.nmr.mgh.harvard.edu/registration.html">here</a>.</p>
-                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="freesurfer" data-tags="latest,3.6,4.0"
                         data-target="#configModal" class="btn btn-primary">Configure</a>
                     </div>
                   </div>
@@ -176,17 +168,33 @@
                   </div>
                   <div class="card">
                     <div class="card-body">
-                      <h5 class="card-title">Preprocessing</h5>
-                      <p class="card-text">Run N4 bias correction, ANTS registration, skull stripping, WhiteStripe on a T1, flair pair.</p>
-                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="preprocessing" data-tags="latest"
+                      <h5 class="card-title">JLF</h5>
+                      <p class="card-text">Run joint label fusion</p>
+                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="jlf" data-tags="latest"
                         data-target="#configModal" class="btn btn-primary">Configure</a>
                     </div>
                   </div>
                   <div class="card">
                     <div class="card-body">
-                      <h5 class="card-title">JLF</h5>
-                      <p class="card-text">Run joint label fusion</p>
-                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="jlf" data-tags="latest"
+                      <h5 class="card-title">nicMSlesions</h5>
+                      <p class="card-text">Supervised deep-learning white matter lesion segmentation, from the NeuroImage Computing Group</p>
+                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="nicmslesions" data-tags="latest,cpu,gpu"
+                        data-target="#configModal" class="btn btn-primary">Configure</a>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">BrainMaGe</h5>
+                      <p class="card-text">The Brain Mask Generator (BrainMaGe) is a deep-learning (DL) generalizable robust brain extraction (skull-stripping) tool explicitly developed for application in brain MRI scans with apparent pathologies, e.g., tumors.</p>
+                      <a href="#" data-toggle="modal" data-org="pennsive" data-image="brainmage" data-tags="latest"
+                        data-target="#configModal" class="btn btn-primary">Configure</a>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">CaPTk</h5>
+                      <p class="card-text">CaPTk is a software platform, written in C++, for analysis of radiographic images of cancer, currently focusing on brain, breast, and lung cancer.</p>
+                      <a href="#" data-toggle="modal" data-org="cbica" data-image="captk" data-tags="latest"
                         data-target="#configModal" class="btn btn-primary">Configure</a>
                     </div>
                   </div>

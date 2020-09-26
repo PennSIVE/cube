@@ -4,6 +4,9 @@ const shortid = require('shortid');
 const docker = {
     run: function(opts, state, win) {
         let command = 'docker run -d';
+        if (opts.entrypoint) {
+            command += ' --entrypoint=""'
+        }
         for (let i = 0; i < opts.bindMounts.length; i++) {
             const mount = opts.bindMounts[i];
             command += ' -v ' + mount.hostPath + ':' + mount.containerPath;

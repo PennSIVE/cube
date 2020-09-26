@@ -139,6 +139,7 @@ function createDeployment(e) {
         gpu: formData.gpu,
         indexVariable: formData.indexVariable,
         tasks: formData.tasks,
+        entrypoint: document.getElementById('entrypoint-switch').checked,
         bindMounts: []
     };
     // loop over all the bind mount paths (in the container)

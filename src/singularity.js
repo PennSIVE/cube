@@ -28,7 +28,7 @@ const singularity = {
         let escapeShell = (cmd) => {
             return cmd.replace(/(["'$`\\])/g, '\\$1');
         };
-        let command = 'singularity exec';
+        let command = (opts.entrypoint) ? 'singularity exec' : 'singularity run';
         for (let i = 0; i < opts.bindMounts.length; i++) {
             const mount = opts.bindMounts[i];
             command += ` -B ~/.cubedata${mount.hostPath}:${mount.containerPath}`;
