@@ -40,7 +40,7 @@
     "url": "git+https://github.com/PennSIVE/cube.git"
   },
   "devDependencies": {
-    "electron": "^8.4.0",
+    "electron": "^8.5.2",
     "electron-builder": "^22.7.0"
   },
   "dependencies": {
